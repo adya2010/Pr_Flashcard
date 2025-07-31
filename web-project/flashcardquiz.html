@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flashcard Quiz App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #dfe9f3, #ffffff);
+      transition: background-color 0.4s;
+    }
+    body.dark-mode {
+      background: linear-gradient(135deg, #1e1e1e, #2e2e2e);
+      color: #fff;
+    }
+    .dark-mode .card { background-color: #292929; color: #f1f1f1; }
+    .card {
+      border: none;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      transition: 0.3s;
+    }
+    .btn { border-radius: 30px; font-weight: 600; }
+    .btn:hover { transform: scale(1.05); transition: 0.2s ease-in-out; }
+    .progress { height: 20px; border-radius: 50px; background: #f0f0f0; }
+    .progress-bar {
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      font-weight: 600;
+    }
+    .category, .difficulty {
+      background-color: #f1f1f1;
+      border-radius: 12px;
+      padding: 5px 15px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #333;
+      margin-right: 10px;
+    }
+    .dark-mode .category, .dark-mode .difficulty {
+      background-color: #444;
+      color: #58aef0;
+    }
+    #quiz-card { animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">🎯 Flashcard Quiz App</h2>
+    <button id="toggleDark" class="btn btn-outline-dark">Toggle Dark Mode</button>
+  </div>
+
+  <!-- Category + Difficulty Select -->
+  <div id="selectionForm" class="mb-4">
+    <h5>Choose Category and Difficulty:</h5>
+    <div class="row g-2 mb-3">
+      <div class="col-md-6">
+        <select id="categoryDropdown" class="form-select">
+          <option value="All">All Categories</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <select id="difficultyDropdown" class="form-select">
+          <option value="All">All Difficulty Levels</option>
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary px-4" onclick="startQuiz()">Start Quiz</button>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress mb-3">
+    <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+  </div>
+
+  <!-- Quiz Card -->
+  <div class="card p-4" id="quiz-card" style="display: none;">
+    <div class="card-body">
+      <div class="d-flex justify-content-between mb-2">
+        <div>
+          <span id="category" class="category">Category</span>
+          <span id="difficulty" class="difficulty">Difficulty</span>
+        </div>
+        <span id="timer" class="timer fw-bold text-danger">Time: 30s</span>
+      </div>
+      <h5 class="card-title fw-semibold" id="question">Question text</h5>
+      <div id="options" class="mt-3"></div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-between">
+    <button class="btn btn-outline-primary" onclick="nextQuestion()">Next</button>
+    <div class="fw-semibold">Score: <span id="score">0</span>/<span id="total">0</span></div>
+  </div>
+
+  <div class="mt-3 text-end fw-semibold">🏆 High Score: <span id="highScore">0</span></div>
+
+  <div class="mt-5">
+    <h5>📜 Quiz History</h5>
+    <ul id="historyList" class="list-group"></ul>
+  </div>
+</div>
+
+
+<script>
+  const fullQuizData = [
+    // 🧪 Science
+    { category: "Science", difficulty: "Easy", question: "What gas do plants absorb?", options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], answer: "Carbon Dioxide" },
+    { category: "Science", difficulty: "Medium", question: "What is the chemical symbol for gold?", options: ["Au", "Ag", "Gd", "Go"], answer: "Au" },
+    { category: "Science", difficulty: "Hard", question: "How many bones in the adult human body?", options: ["206", "201", "210", "208"], answer: "206" },
+
+    // 🌍 Geography
+    { category: "Geography", difficulty: "Easy", question: "What is the capital of France?", options: ["Berlin", "Madrid", "Paris", "Rome"], answer: "Paris" },
+    { category: "Geography", difficulty: "Medium", question: "Which country has the most time zones?", options: ["USA", "China", "France", "Russia"], answer: "France" },
+    { category: "Geography", difficulty: "Hard", question: "Which is the deepest ocean trench?", options: ["Java Trench", "Puerto Rico Trench", "Mariana Trench", "Tonga Trench"], answer: "Mariana Trench" },
+
+    // 📚 Literature
+    { category: "Literature", difficulty: "Easy", question: "Who wrote 'Hamlet'?", options: ["Tolkien", "Shakespeare", "Dickens", "Rowling"], answer: "Shakespeare" },
+    { category: "Literature", difficulty: "Medium", question: "Which novel starts with 'Call me Ishmael'?", options: ["Moby-Dick", "The Odyssey", "Jane Eyre", "Frankenstein"], answer: "Moby-Dick" },
+    { category: "Literature", difficulty: "Hard", question: "What is the original language of 'The Divine Comedy'?", options: ["Latin", "Italian", "Greek", "French"], answer: "Italian" },
+
+    // 💻 Technology
+    { category: "Tech", difficulty: "Easy", question: "What does CPU stand for?", options: ["Central Processing Unit", "Computer Power Unit", "Central Power Unit", "Core Processor Unit"], answer: "Central Processing Unit" },
+    { category: "Tech", difficulty: "Medium", question: "What language is used for web styling?", options: ["HTML", "Python", "CSS", "JavaScript"], answer: "CSS" },
+    { category: "Tech", difficulty: "Hard", question: "What does API stand for?", options: ["App Programming Interface", "Application Programming Interface", "Advanced Processor Integration", "App Process Integration"], answer: "Application Programming Interface" },
+  ];
+
+  let quizData = [], currentQuestion = 0, score = 0, timerInterval, timeLeft = 15;
+
+  function populateFilters() {
+    const categories = [...new Set(fullQuizData.map(q => q.category))];
+    const catDropdown = document.getElementById("categoryDropdown");
+    categories.forEach(cat => {
+      const opt = document.createElement("option");
+      opt.value = cat; opt.textContent = cat;
+      catDropdown.appendChild(opt);
+    });
+  }
+
+  function startQuiz() {
+    const selectedCat = document.getElementById("categoryDropdown").value;
+    const selectedDiff = document.getElementById("difficultyDropdown").value;
+    quizData = fullQuizData.filter(q =>
+      (selectedCat === "All" || q.category === selectedCat) &&
+      (selectedDiff === "All" || q.difficulty === selectedDiff)
+    );
+    if (quizData.length === 0) return alert("No questions found for that selection!");
+    quizData.sort(() => Math.random() - 0.5);
+    currentQuestion = 0; score = 0;
+    document.getElementById("selectionForm").style.display = "none";
+    document.getElementById("quiz-card").style.display = "block";
+    loadQuestion();
+  }
+
+  function loadQuestion() {
+    const q = quizData[currentQuestion];
+    document.getElementById("question").textContent = q.question;
+    document.getElementById("category").textContent = q.category;
+    document.getElementById("difficulty").textContent = q.difficulty;
+    const optionsDiv = document.getElementById("options");
+    optionsDiv.innerHTML = "";
+    q.options.forEach(option => {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-outline-primary w-100 mb-2";
+      btn.textContent = option;
+      btn.onclick = () => {
+  clearInterval(timerInterval);
+  const allButtons = document.querySelectorAll("#options button");
+
+  allButtons.forEach(b => {
+    b.disabled = true;
+    if (b.textContent === q.answer) {
+      b.classList.remove("btn-outline-primary");
+      b.classList.add("btn-success");
+    } else if (b.textContent === option) {
+      b.classList.remove("btn-outline-primary");
+      b.classList.add("btn-danger");
+    }
+  });
+
+  if (option === q.answer) {
+    score++;
+    document.getElementById("correctSound").play();
+  } else {
+    document.getElementById("wrongSound").play();
+  }
+
+  document.getElementById("score").textContent = score;
+};
+      optionsDiv.appendChild(btn);
+    });
+    document.getElementById("total").textContent = quizData.length;
+    updateProgress();
+    startTimer();
+  }
+
+  function nextQuestion() {
+    currentQuestion++;
+    if (currentQuestion < quizData.length) {
+      loadQuestion();
+    } else {
+      clearInterval(timerInterval);
+      document.getElementById("quiz-card").innerHTML = `<h3 class="text-success">🎉 Quiz Complete!</h3><p>Your score: ${score} / ${quizData.length}</p>`;
+      updateProgress(100);
+      checkHighScore();
+      saveHistory(score, quizData.length);
+      loadHistory();
+    }
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timeLeft = 15;
+    document.getElementById("timer").textContent = `Time: ${timeLeft}s`;
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      document.getElementById("timer").textContent = `Time: ${timeLeft}s`;
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert("⏰ Time's up!");
+        nextQuestion();
+      }
+    }, 1000);
+  }
+
+  function updateProgress(p = (currentQuestion / quizData.length) * 100) {
+    document.getElementById("progressBar").style.width = p + "%";
+    document.getElementById("progressBar").textContent = Math.round(p) + "%";
+  }
+
+  function checkHighScore() {
+    const high = localStorage.getItem("highScore") || 0;
+    if (score > high) {
+      localStorage.setItem("highScore", score);
+      document.getElementById("highScore").textContent = score;
+      alert("🏆 New High Score!");
+    }
+  }
+
+  function saveHistory(score, total) {
+    const history = JSON.parse(localStorage.getItem("quizHistory") || "[]");
+    history.unshift({ date: new Date().toLocaleString(), score: `${score}/${total}` });
+    localStorage.setItem("quizHistory", JSON.stringify(history.slice(0, 10)));
+  }
+
+  function loadHistory() {
+    const history = JSON.parse(localStorage.getItem("quizHistory") || "[]");
+    const list = document.getElementById("historyList");
+    list.innerHTML = "";
+    history.forEach(entry => {
+      const li = document.createElement("li");
+      li.className = "list-group-item";
+      li.textContent = `${entry.date} — ${entry.score}`;
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById("toggleDark").onclick = () => document.body.classList.toggle("dark-mode");
+  document.getElementById("highScore").textContent = localStorage.getItem("highScore") || 0;
+
+  populateFilters();
+  loadHistory();
+</script>
+
+</body>
+</html>
